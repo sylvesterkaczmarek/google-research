@@ -329,6 +329,7 @@ class Expo1dSamples:
     if self.multiplier <= 0.001:
       logging.info('Multiplier is too small, using null density.')
       alternative_density = null_expo1d_density_fn
+      alternative_density_max = 2000
     else:
       alternative_density = lambda x: alternative_0_expo1d_density_fn(
           x,
@@ -336,11 +337,18 @@ class Expo1dSamples:
           scale=self.scale,
           multiplier=self.multiplier,
       )
+      # The sum of the component maxima bounds the density on [0, 10],
+      # even when a narrow Gaussian bump exceeds the null envelope.
+      alternative_density_max = (
+          2000 + self.multiplier * stats.norm.pdf(
+              self.location, loc=self.location, scale=self.scale
+          )
+      )
     self.samples_y = rejection_sampling(
         seed=self.key_seed + 49,
         density_fn=alternative_density,
         dimension=1,
-        density_max=2000,
+        density_max=alternative_density_max,
         n_samples=self.n_samples,
         minval=0,
         maxval=10,
